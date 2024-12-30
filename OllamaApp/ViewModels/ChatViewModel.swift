@@ -8,6 +8,7 @@ class ChatViewModel: ObservableObject {
     @Published var selectedModel: String = ""
     @Published var isLoading = false
     @Published var isNewChat: Bool = true
+    @Published var connectionError: String? = nil
     
     private let baseURL = "http://localhost:11434/api"
     private let modelContext: ModelContext
@@ -36,21 +37,54 @@ class ChatViewModel: ObservableObject {
         }
     }
     
+    private func checkOllamaConnection() async -> Bool {
+        guard let url = URL(string: "\(baseURL)/tags") else { return false }
+        
+        do {
+            let (_, response) = try await URLSession.shared.data(from: url)
+            guard let httpResponse = response as? HTTPURLResponse else { return false }
+            return httpResponse.statusCode == 200
+        } catch {
+            await MainActor.run {
+                self.connectionError = "Cannot connect to Ollama. Make sure it's running on localhost:11434"
+            }
+            return false
+        }
+    }
+
     func fetchAvailableModels() {
-        guard let url = URL(string: "\(baseURL)/tags") else { return }
+        guard let url = URL(string: "\(baseURL)/tags") else {
+            connectionError = "Invalid URL"
+            return
+        }
         
         Task {
+            // First check connection
+            guard await checkOllamaConnection() else { return }
+            
             do {
-                let (data, _) = try await URLSession.shared.data(from: url)
-                let response = try JSONDecoder().decode(ModelsResponse.self, from: data)
+                let (data, response) = try await URLSession.shared.data(from: url)
+                
+                guard let httpResponse = response as? HTTPURLResponse else {
+                    connectionError = "Invalid server response"
+                    return
+                }
+                
+                guard httpResponse.statusCode == 200 else {
+                    connectionError = "Server error: \(httpResponse.statusCode)"
+                    return
+                }
+                
+                let modelsResponse = try JSONDecoder().decode(ModelsResponse.self, from: data)
                 await MainActor.run {
-                    self.availableModels = response.models.map { $0.name }
+                    self.connectionError = nil
+                    self.availableModels = modelsResponse.models.map { $0.name }
                     if selectedModel.isEmpty, let firstModel = self.availableModels.first {
                         self.selectedModel = firstModel
                     }
                 }
             } catch {
-                print("Error fetching models: \(error)")
+                connectionError = "Error fetching models: \(error.localizedDescription)"
             }
         }
     }
@@ -61,25 +95,50 @@ class ChatViewModel: ObservableObject {
         messages.append(userMessage)
         saveChatSession()
         isLoading = true
+        connectionError = nil
         
-        guard let url = URL(string: "\(baseURL)/generate") else { return }
+        guard let url = URL(string: "\(baseURL)/generate") else {
+            connectionError = "Invalid URL"
+            isLoading = false
+            return
+        }
+        
         let requestBody = GenerateRequest(model: model, prompt: content, stream: true)
         
         Task {
+            // First check connection
+            guard await checkOllamaConnection() else {
+                isLoading = false
+                return
+            }
+            
             do {
                 var request = URLRequest(url: url)
                 request.httpMethod = "POST"
                 request.setValue("application/json", forHTTPHeaderField: "Content-Type")
                 request.httpBody = try JSONEncoder().encode(requestBody)
                 
-                let (data, _) = try await URLSession.shared.data(for: request)
+                let (data, response) = try await URLSession.shared.data(for: request)
+                
+                guard let httpResponse = response as? HTTPURLResponse else {
+                    connectionError = "Invalid server response"
+                    isLoading = false
+                    return
+                }
+                
+                guard httpResponse.statusCode == 200 else {
+                    connectionError = "Server error: \(httpResponse.statusCode)"
+                    isLoading = false
+                    return
+                }
+                
                 let responseString = String(decoding: data, as: UTF8.self)
                 var fullResponse = ""
                 
                 responseString.split(separator: "\n").forEach { line in
                     if let data = line.data(using: .utf8),
-                       let response = try? JSONDecoder().decode(GenerateResponse.self, from: data) {
-                        fullResponse += response.response
+                       let generateResponse = try? JSONDecoder().decode(GenerateResponse.self, from: data) {
+                        fullResponse += generateResponse.response
                     }
                 }
                 
@@ -90,7 +149,7 @@ class ChatViewModel: ObservableObject {
                 objectWillChange.send()
                 
             } catch {
-                print("Error sending message: \(error)")
+                connectionError = "Error sending message: \(error.localizedDescription)"
             }
             isLoading = false
         }
