@@ -84,7 +84,7 @@ struct OllamaMenuBarApp: App {
     
     var body: some Scene {
         MenuBarExtra("Ollama", systemImage: "brain") {
-            ContentView(windowManager: windowManager, chatViewModel: chatViewModel)
+            PopupContentView(windowManager: windowManager, chatViewModel: chatViewModel)
                 .modelContainer(container)
                 .onAppear {
                     if let mostRecentChat = chatViewModel.chatHistory.first {
