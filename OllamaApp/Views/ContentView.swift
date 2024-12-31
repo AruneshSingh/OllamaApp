@@ -51,7 +51,10 @@ struct ContentView: View {
                     }
                     .help("Start new chat")
                     
-                    Picker("Model", selection: $chatViewModel.selectedModel) {
+                    Picker("Model", selection: Binding(
+                        get: { chatViewModel.selectedModel },
+                        set: { chatViewModel.selectedModel = $0 }
+                    )) {
                         ForEach(chatViewModel.availableModels, id: \.self) { model in
                             Text(model).tag(model)
                         }
@@ -131,9 +134,6 @@ struct ContentView: View {
                 showSettings: $showSettings,
                 chatViewModel: chatViewModel
             )
-        }
-        .onAppear {
-            chatViewModel.fetchAvailableModels()
         }
         .onChange(of: windowManager.showHistory) { newValue in
             if !newValue {

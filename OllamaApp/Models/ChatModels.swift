@@ -39,6 +39,18 @@ class ChatSession {
     }
 }
 
+@Model
+class AvailableModels {
+    var models: [String]
+    var lastUpdated: Date
+    
+    init(models: [String] = [], lastUpdated: Date = Date()) {
+        self.models = models
+        self.lastUpdated = lastUpdated
+    }
+}
+
+
 // Rest of the response structs remain the same
 struct ModelsResponse: Codable {
     let models: [ModelInfo]

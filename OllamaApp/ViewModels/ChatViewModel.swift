@@ -11,29 +11,171 @@ class ChatViewModel: ObservableObject {
     @Published var connectionError: String? = nil
     
     private let baseURL = "http://localhost:11434/api"
-    private let modelContext: ModelContext
+    let container: ModelContainer
     var currentSessionId: UUID?
     
     var chatHistory: [ChatSession] {
         let descriptor = FetchDescriptor<ChatSession>(sortBy: [SortDescriptor(\.lastUpdated, order: .reverse)])
-        let sessions = (try? modelContext.fetch(descriptor)) ?? []
+        let sessions = (try? container.mainContext.fetch(descriptor)) ?? []
         return sessions
     }
     
     init(container: ModelContainer) {
-        self.modelContext = container.mainContext
-        loadSettings()
-        fetchAvailableModels()
+        self.container = container
+        Task {
+            await fetchModelsAndLoadDefault()
+        }
     }
     
-    private func loadSettings() {
+    private func fetchModelsAndLoadDefault() async {
+        // First fetch models
+        let models = await fetchModelsFromOllama()
+        await MainActor.run {
+            self.availableModels = models
+        }
+        
+        // Then load the default model from stored settings
         let descriptor = FetchDescriptor<AppSettings>()
-        if let settings = try? modelContext.fetch(descriptor).first {
-            if !settings.defaultModel.isEmpty && availableModels.contains(settings.defaultModel) {
-                selectedModel = settings.defaultModel
-            } else if let firstModel = availableModels.first {
-                selectedModel = firstModel
+        
+        do {
+            let settings = try container.mainContext.fetch(descriptor)
+            
+            await MainActor.run {
+                if let firstSettings = settings.first,
+                   !firstSettings.defaultModel.isEmpty,
+                   models.contains(firstSettings.defaultModel) {
+                    self.selectedModel = firstSettings.defaultModel
+                    print("[ChatViewModel] Loaded stored default model: \(firstSettings.defaultModel)")
+                } else if let firstModel = models.first {
+                    // If no valid stored default, use first available model
+                    self.selectedModel = firstModel
+                    print("[ChatViewModel] Using first available model: \(firstModel)")
+                    
+                    // Create or update settings
+                    if let existingSettings = settings.first {
+                        existingSettings.defaultModel = firstModel
+                        existingSettings.lastUpdated = Date()
+                    } else {
+                        let newSettings = AppSettings(defaultModel: firstModel)
+                        container.mainContext.insert(newSettings)
+                    }
+                    try? container.mainContext.save()
+                }
             }
+        } catch {
+            print("[ChatViewModel] Error loading default model: \(error)")
+            if let firstModel = models.first {
+                await MainActor.run {
+                    self.selectedModel = firstModel
+                }
+            }
+        }
+    }
+    
+
+    
+    func updateDefaultModel(_ model: String) {
+        guard !model.isEmpty, availableModels.contains(model) else { return }
+        
+        print("[ChatViewModel] Updating default model to: \(model)")
+        let context = container.mainContext
+        let descriptor = FetchDescriptor<AppSettings>()
+        
+        do {
+            let settings = try context.fetch(descriptor)
+            let settingsToUpdate: AppSettings
+            
+            if let existingSettings = settings.first {
+                settingsToUpdate = existingSettings
+            } else {
+                settingsToUpdate = AppSettings(defaultModel: model)
+                context.insert(settingsToUpdate)
+            }
+            
+            settingsToUpdate.defaultModel = model
+            settingsToUpdate.lastUpdated = Date()
+            try context.save()
+            
+            print("[ChatViewModel] Successfully saved default model: \(model)")
+            
+            // Only update selectedModel if this is a new chat
+            if isNewChat {
+                selectedModel = model
+            }
+            
+            // Force a view update
+            objectWillChange.send()
+        } catch {
+            print("[ChatViewModel] Error saving default model: \(error)")
+        }
+    }
+    
+    private func fetchAvailableModels() async {
+        let context = container.mainContext
+        let descriptor = FetchDescriptor<AvailableModels>(sortBy: [SortDescriptor(\AvailableModels.lastUpdated, order: .reverse)])
+        
+        do {
+            let storedModels = try context.fetch(descriptor).first
+            
+            if let storedModels = storedModels,
+               storedModels.lastUpdated.timeIntervalSinceNow > -3600 {
+                self.availableModels = storedModels.models
+                return
+            }
+            
+            let models = await fetchModelsFromOllama()
+            self.availableModels = models
+            
+            if let storedModels = storedModels {
+                storedModels.models = models
+                storedModels.lastUpdated = Date()
+            } else {
+                let newStoredModels = AvailableModels(models: models, lastUpdated: Date())
+                context.insert(newStoredModels)
+            }
+            try context.save()
+            
+        } catch {
+            print("Error loading models: \(error)")
+            self.availableModels = await fetchModelsFromOllama()
+        }
+    }
+    
+    private func fetchModelsFromOllama() async -> [String] {
+        guard let url = URL(string: "\(baseURL)/tags") else {
+            await MainActor.run {
+                self.connectionError = "Invalid URL"
+            }
+            return []
+        }
+        
+        do {
+            let (data, response) = try await URLSession.shared.data(from: url)
+            
+            guard let httpResponse = response as? HTTPURLResponse else {
+                await MainActor.run {
+                    self.connectionError = "Invalid server response"
+                }
+                return []
+            }
+            
+            guard httpResponse.statusCode == 200 else {
+                await MainActor.run {
+                    self.connectionError = "Server error: \(httpResponse.statusCode)"
+                }
+                return []
+            }
+            
+            let modelsResponse = try JSONDecoder().decode(ModelsResponse.self, from: data)
+            await MainActor.run {
+                self.connectionError = nil
+            }
+            return modelsResponse.models.map { $0.name }
+        } catch {
+            await MainActor.run {
+                self.connectionError = "Error fetching models: \(error.localizedDescription)"
+            }
+            return []
         }
     }
     
@@ -52,46 +194,9 @@ class ChatViewModel: ObservableObject {
         }
     }
 
-    func fetchAvailableModels() {
-        guard let url = URL(string: "\(baseURL)/tags") else {
-            connectionError = "Invalid URL"
-            return
-        }
-        
-        Task {
-            // First check connection
-            guard await checkOllamaConnection() else { return }
-            
-            do {
-                let (data, response) = try await URLSession.shared.data(from: url)
-                
-                guard let httpResponse = response as? HTTPURLResponse else {
-                    connectionError = "Invalid server response"
-                    return
-                }
-                
-                guard httpResponse.statusCode == 200 else {
-                    connectionError = "Server error: \(httpResponse.statusCode)"
-                    return
-                }
-                
-                let modelsResponse = try JSONDecoder().decode(ModelsResponse.self, from: data)
-                await MainActor.run {
-                    self.connectionError = nil
-                    self.availableModels = modelsResponse.models.map { $0.name }
-                    if selectedModel.isEmpty, let firstModel = self.availableModels.first {
-                        self.selectedModel = firstModel
-                    }
-                }
-            } catch {
-                connectionError = "Error fetching models: \(error.localizedDescription)"
-            }
-        }
-    }
-    
     func sendMessage(content: String, model: String) {
         let userMessage = Message(id: UUID(), role: "user", content: content)
-        modelContext.insert(userMessage)
+        container.mainContext.insert(userMessage)
         messages.append(userMessage)
         saveChatSession()
         isLoading = true
@@ -106,7 +211,6 @@ class ChatViewModel: ObservableObject {
         let requestBody = GenerateRequest(model: model, prompt: content, stream: true)
         
         Task {
-            // First check connection
             guard await checkOllamaConnection() else {
                 isLoading = false
                 return
@@ -143,7 +247,7 @@ class ChatViewModel: ObservableObject {
                 }
                 
                 let assistantMessage = Message(id: UUID(), role: "assistant", content: fullResponse)
-                modelContext.insert(assistantMessage)
+                container.mainContext.insert(assistantMessage)
                 messages.append(assistantMessage)
                 saveChatSession()
                 objectWillChange.send()
@@ -162,17 +266,15 @@ class ChatViewModel: ObservableObject {
         let title = ChatSession.generateTitle(from: messages)
         
         if let currentId = currentSessionId,
-           let existingSession = try? modelContext.fetch(FetchDescriptor<ChatSession>(
+           let existingSession = try? container.mainContext.fetch(FetchDescriptor<ChatSession>(
             predicate: #Predicate<ChatSession> { $0.id == currentId }
            )).first {
-            // Update existing session
             existingSession.lastUpdated = now
             existingSession.title = title
             existingSession.modelName = selectedModel
             existingSession.messages = messages
             messages.forEach { $0.chat = existingSession }
         } else {
-            // Create new session
             let newSession = ChatSession(
                 lastUpdated: now,
                 title: title,
@@ -180,10 +282,10 @@ class ChatViewModel: ObservableObject {
                 messages: messages
             )
             currentSessionId = newSession.id
-            modelContext.insert(newSession)
+            container.mainContext.insert(newSession)
         }
         
-        try? modelContext.save()
+        try? container.mainContext.save()
         isNewChat = false
         objectWillChange.send()
     }
@@ -200,22 +302,21 @@ class ChatViewModel: ObservableObject {
         messages = []
         currentSessionId = nil
         isNewChat = true
-        // Load default model from settings
+        
         let descriptor = FetchDescriptor<AppSettings>()
-        if let settings = try? modelContext.fetch(descriptor).first,
-           !settings.defaultModel.isEmpty && availableModels.contains(settings.defaultModel) {
+        if let settings = try? container.mainContext.fetch(descriptor).first,
+           !settings.defaultModel.isEmpty,
+           availableModels.contains(settings.defaultModel) {
             selectedModel = settings.defaultModel
-        } else if let firstModel = availableModels.first {
-            selectedModel = firstModel
         }
         objectWillChange.send()
     }
     
     func clearAllHistory() {
         let descriptor = FetchDescriptor<ChatSession>()
-        if let sessions = try? modelContext.fetch(descriptor) {
-            sessions.forEach { modelContext.delete($0) }
-            try? modelContext.save()
+        if let sessions = try? container.mainContext.fetch(descriptor) {
+            sessions.forEach { container.mainContext.delete($0) }
+            try? container.mainContext.save()
         }
     }
 }
