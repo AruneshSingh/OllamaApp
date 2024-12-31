@@ -39,9 +39,12 @@ class WindowManager: ObservableObject {
         
         hotKey?.keyDownHandler = { [weak self] in
             print("HotKey triggered! \(Date())")
-            // Modified to ensure the hotkey window is always pinned
             Task { @MainActor in
-                self?.showPinnedWindow()
+                if let window = self?.pinnedWindow, window.isVisible {
+                    self?.closePinnedWindow()
+                } else {
+                    self?.showPinnedWindow()
+                }
             }
         }
         
