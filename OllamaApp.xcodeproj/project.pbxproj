@@ -6,8 +6,14 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		65F9C0382D24057500802498 /* HotKey in Frameworks */ = {isa = PBXBuildFile; productRef = 65F9C0372D24057500802498 /* HotKey */; };
+		65F9C03A2D240EB900802498 /* Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 65F9C0392D240EB900802498 /* Info.plist */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXFileReference section */
 		65E51DEC2D2306060005B4BB /* OllamaApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = OllamaApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		65F9C0392D240EB900802498 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -23,6 +29,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				65F9C0382D24057500802498 /* HotKey in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -32,6 +39,7 @@
 		65E51DE32D2306060005B4BB = {
 			isa = PBXGroup;
 			children = (
+				65F9C0392D240EB900802498 /* Info.plist */,
 				65E51DEE2D2306060005B4BB /* OllamaApp */,
 				65E51DED2D2306060005B4BB /* Products */,
 			);
@@ -65,6 +73,7 @@
 			);
 			name = OllamaApp;
 			packageProductDependencies = (
+				65F9C0372D24057500802498 /* HotKey */,
 			);
 			productName = OllamaApp;
 			productReference = 65E51DEC2D2306060005B4BB /* OllamaApp.app */;
@@ -94,6 +103,9 @@
 			);
 			mainGroup = 65E51DE32D2306060005B4BB;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				65F9C0362D24057500802498 /* XCRemoteSwiftPackageReference "HotKey" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 65E51DED2D2306060005B4BB /* Products */;
 			projectDirPath = "";
@@ -109,6 +121,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				65F9C03A2D240EB900802498 /* Info.plist in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -257,6 +270,8 @@
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = "Ollama App";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.developer-tools";
 				INFOPLIST_KEY_LSUIElement = YES;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -286,6 +301,8 @@
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = "Ollama App";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.developer-tools";
 				INFOPLIST_KEY_LSUIElement = YES;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -323,6 +340,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		65F9C0362D24057500802498 /* XCRemoteSwiftPackageReference "HotKey" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/soffes/HotKey";
+			requirement = {
+				branch = main;
+				kind = branch;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		65F9C0372D24057500802498 /* HotKey */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 65F9C0362D24057500802498 /* XCRemoteSwiftPackageReference "HotKey" */;
+			productName = HotKey;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 65E51DE42D2306060005B4BB /* Project object */;
 }

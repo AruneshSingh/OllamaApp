@@ -1,5 +1,6 @@
 import SwiftUI
 import SwiftData
+import Accessibility
 
 @main
 struct OllamaMenuBarApp: App {
@@ -53,7 +54,32 @@ struct OllamaMenuBarApp: App {
         
         let chat = ChatViewModel(container: container)
         _chatViewModel = StateObject(wrappedValue: chat)
-        _windowManager = StateObject(wrappedValue: WindowStateManager(chatViewModel: chat))
+        let stateManager = WindowStateManager(chatViewModel: chat)
+        _windowManager = StateObject(wrappedValue: stateManager)
+        
+        // Setup WindowManager with dependencies
+        WindowManager.shared.setup(chatViewModel: chat, windowStateManager: stateManager)
+        
+        // Print to verify initialization
+        print("App initialized with WindowManager setup")
+        
+        // Add permission request
+        requestAccessibilityPermissions()
+    }
+    
+    // Add new method for permissions
+    private func requestAccessibilityPermissions() {
+        // Request permissions with UI prompt
+        let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true]
+        let trusted = AXIsProcessTrustedWithOptions(options as CFDictionary)
+        print("Accessibility permissions status: \(trusted)")
+        
+        // If permissions granted, reload hotkey
+        if trusted {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                WindowManager.shared.reloadHotKey()
+            }
+        }
     }
     
     var body: some Scene {
@@ -61,7 +87,6 @@ struct OllamaMenuBarApp: App {
             ContentView(windowManager: windowManager, chatViewModel: chatViewModel)
                 .modelContainer(container)
                 .onAppear {
-                    // Load most recent chat when popup opens
                     if let mostRecentChat = chatViewModel.chatHistory.first {
                         chatViewModel.loadSession(mostRecentChat)
                     }
