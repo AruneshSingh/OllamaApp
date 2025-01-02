@@ -157,9 +157,12 @@ class WindowManager: ObservableObject {
         if let window = quickInputWindow {
             window.level = .floating
             window.collectionBehavior = [.canJoinAllSpaces]
-            window.styleMask = [.titled, .closable]
+            window.styleMask = [.borderless, .titled] 
+            window.titlebarAppearsTransparent = true 
+            window.titleVisibility = .hidden 
+            window.backgroundColor = .clear
+            window.isMovableByWindowBackground = true
             
-            // Center the window on screen
             if let screen = NSScreen.main {
                 let windowSize = NSSize(width: 500, height: 60)
                 let screenFrame = screen.frame
@@ -169,6 +172,7 @@ class WindowManager: ObservableObject {
             }
             
             WindowConfiguration.showWindow(window)
+            window.makeKeyAndOrderFront(nil) 
         }
     }
     

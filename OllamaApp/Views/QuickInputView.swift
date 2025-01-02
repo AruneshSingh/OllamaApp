@@ -1,4 +1,3 @@
-// Your imports remain the same
 import SwiftUI
 
 struct QuickInputView: View {
@@ -17,6 +16,7 @@ struct QuickInputView: View {
                 .onSubmit {
                     if !inputText.isEmpty {
                         let messageText = inputText
+                        //
                         // Close quick input window
                         WindowManager.shared.closeQuickInputWindow()
                         // Open pinned window with new chat
@@ -32,5 +32,3 @@ struct QuickInputView: View {
         .frame(width: 500, height: 60)
     }
 }
-
-// End of file
