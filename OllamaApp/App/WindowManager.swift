@@ -7,8 +7,10 @@ class WindowManager: ObservableObject {
     static let shared = WindowManager()
     
     private var hotKey: HotKey?
+    private var quickInputHotKey: HotKey?
     private var pinnedWindow: NSWindow?
     private var popupWindow: NSWindow?
+    private var quickInputWindow: NSWindow?
     private weak var chatViewModel: ChatViewModel?
     private weak var windowStateManager: WindowStateManager?
     
@@ -19,6 +21,7 @@ class WindowManager: ObservableObject {
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
             Task { @MainActor in
                 self?.setupHotKey()
+                self?.setupQuickInputHotKey()
             }
         }
     }
@@ -49,6 +52,24 @@ class WindowManager: ObservableObject {
         }
         
         isHotkeyEnabled = hotKey != nil
+    }
+    
+    private func setupQuickInputHotKey() {
+        quickInputHotKey = nil
+        
+        let keyCombo = KeyCombo(key: .space, modifiers: [.control, .shift])
+        quickInputHotKey = HotKey(keyCombo: keyCombo)
+        
+        quickInputHotKey?.keyDownHandler = { [weak self] in
+            Task { @MainActor in
+                // Toggle quick input window
+                if let window = self?.quickInputWindow, window.isVisible {
+                    self?.closeQuickInputWindow()
+                } else {
+                    self?.showQuickInputWindow()
+                }
+            }
+        }
     }
     
     func reloadHotKey() {
@@ -119,6 +140,38 @@ class WindowManager: ObservableObject {
         }
     }
     
+    func showQuickInputWindow() {
+        guard let chatViewModel = chatViewModel,
+              let windowStateManager = windowStateManager else { return }
+        
+        let contentView = QuickInputView(windowManager: windowStateManager, chatViewModel: chatViewModel)
+            .modelContainer(chatViewModel.container)
+        
+        let hostingView = NSHostingView(rootView: contentView)
+        quickInputWindow = WindowConfiguration.createWindow(
+            title: "Quick Input",
+            contentView: hostingView,
+            isPinned: false
+        )
+        
+        if let window = quickInputWindow {
+            window.level = .floating
+            window.collectionBehavior = [.canJoinAllSpaces]
+            window.styleMask = [.titled, .closable]
+            
+            // Center the window on screen
+            if let screen = NSScreen.main {
+                let windowSize = NSSize(width: 500, height: 60)
+                let screenFrame = screen.frame
+                let x = (screenFrame.width - windowSize.width) / 2
+                let y = (screenFrame.height - windowSize.height) / 2
+                window.setFrame(NSRect(x: x, y: y, width: windowSize.width, height: windowSize.height), display: true)
+            }
+            
+            WindowConfiguration.showWindow(window)
+        }
+    }
+    
     func closePinnedWindow() {
         pinnedWindow?.close()
         pinnedWindow = nil
@@ -128,5 +181,10 @@ class WindowManager: ObservableObject {
     func closePopupWindow() {
         popupWindow?.close()
         popupWindow = nil
+    }
+    
+    func closeQuickInputWindow() {
+        quickInputWindow?.close()
+        quickInputWindow = nil
     }
 }
