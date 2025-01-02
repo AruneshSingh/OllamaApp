@@ -111,7 +111,7 @@ class WindowManager: ObservableObject {
             
             let hostingView = NSHostingView(rootView: contentView)
             pinnedWindow = WindowConfiguration.createWindow(
-                title: "Ollama Chat",
+                title: "Better AI interface",
                 contentView: hostingView,
                 isPinned: true
             )
@@ -158,6 +158,12 @@ class WindowManager: ObservableObject {
     }
     
     func showQuickInputWindow() {
+        
+        let rectWidth: CGFloat = 800
+        let rectHeight: CGFloat = 80
+        
+        let rectSize = NSRect(x: 0, y: 0, width: rectWidth, height: rectHeight)
+        
         guard let chatViewModel = chatViewModel,
               let windowStateManager = windowStateManager else { return }
         
@@ -166,7 +172,7 @@ class WindowManager: ObservableObject {
         
         let hostingView = NSHostingView(rootView: contentView)
         let panel = QuickInputPanel(
-            contentRect: NSRect(x: 0, y: 0, width: 500, height: 80),
+            contentRect: rectSize,
             styleMask: [.nonactivatingPanel, .borderless],
             backing: .buffered,
             defer: false
@@ -192,21 +198,21 @@ class WindowManager: ObservableObject {
             window.hasShadow = true
             
             // Set up the hosting view first
-            hostingView.frame = NSRect(x: 0, y: 0, width: 500, height: 80)
+            hostingView.frame = rectSize
             
             // Set up the visual effect view frame
-            visualEffectView.frame = NSRect(x: 0, y: 0, width: 500, height: 80)
+            visualEffectView.frame = rectSize
             
             // Add views in the correct order
-            window.contentView = NSView(frame: NSRect(x: 0, y: 0, width: 500, height: 80))
+            window.contentView = NSView(frame: rectSize)
             window.contentView?.addSubview(visualEffectView)
             window.contentView?.addSubview(hostingView)
             
             // Center the window
             if let screen = NSScreen.main {
                 let screenFrame = screen.frame
-                let x = (screenFrame.width - 500) / 2
-                let y = (screenFrame.height - 80) / 2
+                let x = (screenFrame.width - rectWidth) / 2
+                let y = (screenFrame.height - rectHeight) / 2
                 window.setFrameOrigin(NSPoint(x: x, y: y))
             }
             

@@ -7,24 +7,30 @@ struct QuickInputView: View {
     @FocusState private var isFocused: Bool
     
     var body: some View {
-        TextField("Ask anything...", text: $inputText)
-            .textFieldStyle(.plain)
-            .font(.system(size: 20))
-            .focused($isFocused)
-            .onSubmit {
-                if !inputText.isEmpty {
-                    let messageText = inputText
-                    WindowManager.shared.closeQuickInputWindow()
-                    chatViewModel.startNewChat()
-                    chatViewModel.sendMessage(content: messageText, model: chatViewModel.selectedModel)
-                    WindowManager.shared.showPinnedWindow()
+        HStack {
+            TextField("Ask anything...", text: $inputText)
+                .textFieldStyle(.plain)
+                .font(.system(size: 20))
+                .focused($isFocused)
+                .onSubmit {
+                    if !inputText.isEmpty {
+                        let messageText = inputText
+                        WindowManager.shared.closeQuickInputWindow()
+                        chatViewModel.startNewChat()
+                        chatViewModel.sendMessage(content: messageText, model: chatViewModel.selectedModel)
+                        WindowManager.shared.showPinnedWindow()
+                    }
                 }
-            }
-            .onAppear {
-                isFocused = true
-            }
-            .padding(.horizontal, 24)
-            .padding(.vertical, 32)
-            .frame(maxWidth: .infinity)
+                .onAppear {
+                    isFocused = true
+                }
+            
+            Image(systemName: "return")
+                .foregroundColor(.gray)
+                .padding(.trailing, 8)
+        }
+        .padding(.horizontal, 24)
+        .padding(.vertical, 32)
+        .frame(maxWidth: .infinity)
     }
 }

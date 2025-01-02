@@ -20,7 +20,7 @@ struct PinnedContentView: View {
         VStack(spacing: 12) {
             // Header with settings and history buttons
             HStack {
-                Text("Ollama Chat")
+                Text("Better AI interface")
                     .font(.headline)
                 
                 Spacer()
