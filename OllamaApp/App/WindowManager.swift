@@ -2,6 +2,21 @@ import AppKit
 import SwiftUI
 import HotKey
 
+class QuickInputNSWindow: NSWindow {
+    override var canBecomeKey: Bool {
+        return true
+    }
+    
+    override var acceptsFirstResponder: Bool {
+        return true
+    }
+}
+
+class QuickInputPanel: NSPanel {
+    override var canBecomeKey: Bool { true }
+    override var canBecomeMain: Bool { true }
+}
+
 @MainActor
 class WindowManager: ObservableObject {
     static let shared = WindowManager()
@@ -105,6 +120,8 @@ class WindowManager: ObservableObject {
                 window.level = .floating
                 window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
                 window.setFrameAutosaveName("OllamaWindow")
+                window.backgroundColor = NSColor.black.withAlphaComponent(0.6)
+                window.styleMask.insert(.resizable)
             }
         } else {
             windowStateManager.isPinned = true
@@ -148,31 +165,53 @@ class WindowManager: ObservableObject {
             .modelContainer(chatViewModel.container)
         
         let hostingView = NSHostingView(rootView: contentView)
-        quickInputWindow = WindowConfiguration.createWindow(
-            title: "Quick Input",
-            contentView: hostingView,
-            isPinned: false
+        let panel = QuickInputPanel(
+            contentRect: NSRect(x: 0, y: 0, width: 500, height: 80),
+            styleMask: [.nonactivatingPanel, .borderless],
+            backing: .buffered,
+            defer: false
         )
         
+        quickInputWindow = panel
+        
         if let window = quickInputWindow {
-            window.level = .floating
-            window.collectionBehavior = [.canJoinAllSpaces]
-            window.styleMask = [.borderless, .titled] 
-            window.titlebarAppearsTransparent = true 
-            window.titleVisibility = .hidden 
-            window.backgroundColor = .clear
-            window.isMovableByWindowBackground = true
+            // Create and configure visual effect view first
+            let visualEffectView = NSVisualEffectView()
+            visualEffectView.material = .hudWindow
+            visualEffectView.blendingMode = .behindWindow
+            visualEffectView.state = .active
+            visualEffectView.wantsLayer = true
+            visualEffectView.layer?.cornerRadius = 10
+            visualEffectView.layer?.backgroundColor = NSColor.black.withAlphaComponent(0.7).cgColor
             
+            // Configure the window
+            window.backgroundColor = .clear
+            window.isOpaque = false
+            window.level = .floating
+            window.isMovableByWindowBackground = true
+            window.hasShadow = true
+            
+            // Set up the hosting view first
+            hostingView.frame = NSRect(x: 0, y: 0, width: 500, height: 80)
+            
+            // Set up the visual effect view frame
+            visualEffectView.frame = NSRect(x: 0, y: 0, width: 500, height: 80)
+            
+            // Add views in the correct order
+            window.contentView = NSView(frame: NSRect(x: 0, y: 0, width: 500, height: 80))
+            window.contentView?.addSubview(visualEffectView)
+            window.contentView?.addSubview(hostingView)
+            
+            // Center the window
             if let screen = NSScreen.main {
-                let windowSize = NSSize(width: 500, height: 60)
                 let screenFrame = screen.frame
-                let x = (screenFrame.width - windowSize.width) / 2
-                let y = (screenFrame.height - windowSize.height) / 2
-                window.setFrame(NSRect(x: x, y: y, width: windowSize.width, height: windowSize.height), display: true)
+                let x = (screenFrame.width - 500) / 2
+                let y = (screenFrame.height - 80) / 2
+                window.setFrameOrigin(NSPoint(x: x, y: y))
             }
             
-            WindowConfiguration.showWindow(window)
-            window.makeKeyAndOrderFront(nil) 
+            window.makeKeyAndOrderFront(nil)
+            NSApp.activate(ignoringOtherApps: true)
         }
     }
     

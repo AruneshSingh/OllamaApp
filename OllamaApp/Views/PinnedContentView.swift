@@ -51,7 +51,7 @@ struct PinnedContentView: View {
                 .help("Settings")
             }
             
-            // Chat content
+            // Chat content - Remove fixed height to allow window resizing
             ScrollViewReader { proxy in
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: 8) {
@@ -68,7 +68,6 @@ struct PinnedContentView: View {
                             .id(bottomID)
                     }
                 }
-                .frame(height: 400)
                 .onChange(of: chatViewModel.messages) { oldValue, newValue in
                     withAnimation {
                         proxy.scrollTo(bottomID, anchor: .bottom)
@@ -95,6 +94,7 @@ struct PinnedContentView: View {
             .padding(.bottom, 8)
         }
         .padding()
+        .frame(minHeight: 500) // Add minimum height constraint
         .sheet(isPresented: $windowManager.showHistory) {
             HistoryView(
                 viewModel: chatViewModel,
@@ -107,5 +107,35 @@ struct PinnedContentView: View {
                 chatViewModel: chatViewModel
             )
         }
+    }
+}
+
+struct ResizeHandle: View {
+    @Binding var height: CGFloat
+    @State private var dragLocation: CGFloat = 0
+    
+    var body: some View {
+        Rectangle()
+            .fill(Color.gray.opacity(0.3))
+            .frame(width: 100, height: 4)
+            .padding(.bottom, -2)
+            .gesture(
+                DragGesture()
+                    .onChanged { value in
+                        let delta = dragLocation - value.location.y
+                        height = min(max(200, height + delta), 800)
+                        dragLocation = value.location.y
+                    }
+                    .onEnded { _ in
+                        dragLocation = 0
+                    }
+            )
+            .onHover { inside in
+                if inside {
+                    NSCursor.resizeUpDown.push()
+                } else {
+                    NSCursor.pop()
+                }
+            }
     }
 }

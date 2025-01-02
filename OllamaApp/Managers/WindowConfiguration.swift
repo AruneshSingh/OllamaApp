@@ -22,11 +22,12 @@ struct WindowConfiguration {
         // Basic window setup
         window.title = title
         window.center()
-        window.minSize = NSSize(width: 300, height: 400)
+        window.minSize = NSSize(width: 300, height: 500)
+        window.maxSize = NSSize(width: 800, height: 1000)
         window.isReleasedWhenClosed = false
         
         // Window appearance
-        window.backgroundColor = .clear
+        window.backgroundColor = NSColor.black.withAlphaComponent(0.6)
         window.isOpaque = false
         window.hasShadow = true
         window.appearance = NSAppearance(named: .vibrantDark)
