@@ -8,7 +8,7 @@ struct QuickInputView: View {
     
     var body: some View {
         HStack {
-            TextField("Ask anything...", text: $inputText)
+            TextField("Ask anything... (use @code, @image, or @chat)", text: $inputText)
                 .textFieldStyle(.plain)
                 .font(.system(size: 20))
                 .focused($isFocused)
@@ -17,7 +17,7 @@ struct QuickInputView: View {
                         let messageText = inputText
                         WindowManager.shared.closeQuickInputWindow()
                         chatViewModel.startNewChat()
-                        chatViewModel.sendMessage(content: messageText, model: chatViewModel.selectedModel)
+                        chatViewModel.sendMessage(content: messageText)
                         WindowManager.shared.showPinnedWindow()
                     }
                 }

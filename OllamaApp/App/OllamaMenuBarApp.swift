@@ -2,6 +2,14 @@ import SwiftUI
 import SwiftData
 import Accessibility
 
+// Added schema version and migration support
+let schema = Schema([AppSettings.self])
+let modelConfiguration = ModelConfiguration(
+    schema: schema,
+    isStoredInMemoryOnly: false,
+    allowsSave: true
+)
+
 @main
 struct OllamaMenuBarApp: App {
     @StateObject private var chatViewModel: ChatViewModel
@@ -10,6 +18,9 @@ struct OllamaMenuBarApp: App {
     private let initializedContainer: ModelContainer
     
     init() {
+        // Register the dictionary transformer
+        DictionaryTransformer.register()
+        
         // Initialize container first
         do {
             initializedContainer = try DIContainer.shared.databaseService.setupModelContainer()

@@ -194,8 +194,36 @@ class ChatViewModel: ObservableObject {
         }
     }
 
-    func sendMessage(content: String, model: String) {
-        let userMessage = Message(id: UUID(), role: "user", content: content)
+    private func extractTag(from content: String) -> (tag: String?, message: String) {
+        for tag in TaggedModel.allCases {
+            if content.hasPrefix(tag.rawValue) {
+                let cleanMessage = content.replacingOccurrences(of: tag.rawValue, with: "").trimmingCharacters(in: .whitespaces)
+                return (tag.rawValue, cleanMessage)
+            }
+        }
+        return (nil, content)
+    }
+    
+    private func getModelForTag(_ tag: String?) -> String {
+        guard let tag = tag else { return selectedModel }
+        
+        let descriptor = FetchDescriptor<AppSettings>()
+        guard let settings = try? container.mainContext.fetch(descriptor).first else {
+            return selectedModel
+        }
+        
+        let tagModel = settings.getModelForTag(tag)
+        return !tagModel.isEmpty ? tagModel : selectedModel
+    }
+    
+    func sendMessage(content: String, model: String? = nil) {
+        let (detectedTag, cleanMessage) = extractTag(from: content)
+        let modelToUse = model ?? getModelForTag(detectedTag)
+        
+        // Update the selectedModel for the current chat
+        self.selectedModel = modelToUse
+        
+        let userMessage = Message(id: UUID(), role: "user", content: cleanMessage)
         container.mainContext.insert(userMessage)
         messages.append(userMessage)
         saveChatSession()
@@ -208,7 +236,7 @@ class ChatViewModel: ObservableObject {
             return
         }
         
-        let requestBody = GenerateRequest(model: model, prompt: content, stream: true)
+        let requestBody = GenerateRequest(model: modelToUse, prompt: cleanMessage, stream: true)
         
         Task {
             guard await checkOllamaConnection() else {

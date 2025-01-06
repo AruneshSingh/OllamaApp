@@ -42,6 +42,24 @@ struct SettingsView: View {
                         }
                     }
                 }
+                
+                Section("Tag Model Mappings") {
+                    if let settings = diContainer.settingsService.currentSettings {
+                        ForEach(TaggedModel.allCases, id: \.self) { tag in
+                            Picker(tag.rawValue, selection: Binding(
+                                get: { settings.getModelForTag(tag.rawValue) },
+                                set: { newValue in
+                                    settings.setModelForTag(tag.rawValue, model: newValue)
+                                    try? modelContext.save()
+                                }
+                            )) {
+                                ForEach(chatViewModel.availableModels, id: \.self) { model in
+                                    Text(model).tag(model)
+                                }
+                            }
+                        }
+                    }
+                }
             }
             .navigationTitle("Settings")
             .toolbar {
