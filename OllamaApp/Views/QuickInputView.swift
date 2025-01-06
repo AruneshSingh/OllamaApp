@@ -4,28 +4,27 @@ import AppKit
 struct QuickInputView: View {
     @ObservedObject var windowManager: WindowStateManager
     @ObservedObject var chatViewModel: ChatViewModel
-    @State private var inputText = ""
     @FocusState private var isFocused: Bool
     @State private var windowDelegate: QuickInputWindowDelegate? = nil
     
     private func highlightedText() -> some View {
-        let text = Text(inputText.isEmpty ? "Ask anything... (use @code, @image, or @chat)" : "")
+        let text = Text(windowManager.quickInputText.isEmpty ? "Ask anything... (use @code, @image, or @chat)" : "")
             .foregroundColor(.gray)
         
-        if inputText.isEmpty {
+        if windowManager.quickInputText.isEmpty {
             return AnyView(text)
         }
         
         var finalText = Text("")
-        var currentIndex = inputText.startIndex
+        var currentIndex = windowManager.quickInputText.startIndex
         
         // Split text and apply styling to tags
-        while currentIndex < inputText.endIndex {
+        while currentIndex < windowManager.quickInputText.endIndex {
             var foundTag = false
             
             for tag in TaggedModel.allCases {
-                if inputText[currentIndex...].hasPrefix(tag.rawValue) {
-                    let tagEnd = inputText.index(currentIndex, offsetBy: tag.rawValue.count)
+                if windowManager.quickInputText[currentIndex...].hasPrefix(tag.rawValue) {
+                    let tagEnd = windowManager.quickInputText.index(currentIndex, offsetBy: tag.rawValue.count)
                     let beforeTag = finalText
                     
                     finalText = beforeTag + Text(tag.rawValue)
@@ -38,8 +37,8 @@ struct QuickInputView: View {
             }
             
             if !foundTag {
-                finalText = finalText + Text(String(inputText[currentIndex]))
-                currentIndex = inputText.index(after: currentIndex)
+                finalText = finalText + Text(String(windowManager.quickInputText[currentIndex]))
+                currentIndex = windowManager.quickInputText.index(after: currentIndex)
             }
         }
         
@@ -50,7 +49,7 @@ struct QuickInputView: View {
         HStack {
             // Create a ZStack with TextField at the bottom and styled text overlay
             ZStack(alignment: .leading) {
-                TextField("", text: $inputText)
+                TextField("", text: $windowManager.quickInputText)
                     .textFieldStyle(.plain)
                     .font(.system(size: 20, design: .monospaced))
                     .focused($isFocused)
@@ -58,19 +57,19 @@ struct QuickInputView: View {
                     .scrollDisabled(true)
                     .frame(height: 40)
                     .onSubmit {
-                        if !inputText.isEmpty {
-                            let messageText = inputText
+                        if !windowManager.quickInputText.isEmpty {
+                            let messageText = windowManager.quickInputText
                             WindowManager.shared.closeQuickInputWindow()
                             chatViewModel.startNewChat()
                             chatViewModel.sendMessage(content: messageText)
                             WindowManager.shared.showPinnedWindow()
                         }
                     }
-                    .onChange(of: inputText) { _, _ in
-                        if inputText.contains("\n") {
-                            inputText = inputText.replacingOccurrences(of: "\n", with: "")
-                            if !inputText.isEmpty {
-                                let messageText = inputText
+                    .onChange(of: windowManager.quickInputText) { _, newValue in
+                        if newValue.contains("\n") {
+                            windowManager.quickInputText = newValue.replacingOccurrences(of: "\n", with: "")
+                            if !windowManager.quickInputText.isEmpty {
+                                let messageText = windowManager.quickInputText
                                 WindowManager.shared.closeQuickInputWindow()
                                 chatViewModel.startNewChat()
                                 chatViewModel.sendMessage(content: messageText)

@@ -5,6 +5,7 @@ import AppKit
 class WindowStateManager: ObservableObject {
     @Published var isPinned: Bool = false
     @Published var showHistory: Bool = false
+    @Published var quickInputText: String = ""
     
     unowned let chatViewModel: ChatViewModel
     
@@ -23,5 +24,3 @@ class WindowStateManager: ObservableObject {
         }
     }
 }
-
-// End of file
