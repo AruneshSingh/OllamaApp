@@ -56,10 +56,14 @@ struct QuickInputView: View {
                     .foregroundColor(.clear) // Make text invisible but keep cursor
                     .scrollDisabled(true)
                     .frame(height: 40)
+                    .task {
+                        // Focus immediately when the view appears
+                        isFocused = true
+                    }
                     .onSubmit {
                         if !windowManager.quickInputText.isEmpty {
                             let messageText = windowManager.quickInputText
-                            WindowManager.shared.closeQuickInputWindow()
+                            WindowManager.shared.closeQuickInputWindow(clearText: true)
                             chatViewModel.startNewChat()
                             chatViewModel.sendMessage(content: messageText)
                             WindowManager.shared.showPinnedWindow()
@@ -70,7 +74,7 @@ struct QuickInputView: View {
                             windowManager.quickInputText = newValue.replacingOccurrences(of: "\n", with: "")
                             if !windowManager.quickInputText.isEmpty {
                                 let messageText = windowManager.quickInputText
-                                WindowManager.shared.closeQuickInputWindow()
+                                WindowManager.shared.closeQuickInputWindow(clearText: true)
                                 chatViewModel.startNewChat()
                                 chatViewModel.sendMessage(content: messageText)
                                 WindowManager.shared.showPinnedWindow()
@@ -93,18 +97,7 @@ struct QuickInputView: View {
         .padding(.horizontal, 24)
         .padding(.vertical, 24)
         .frame(maxWidth: .infinity)
-        .background(
-            // Add blur effect behind the black background
-            ZStack {
-                VisualEffectView(material: .hudWindow, blendingMode: .behindWindow)
-                Color.black.opacity(0.4) // Slightly reduced opacity to show blur
-            }
-        )
-        .clipShape(RoundedRectangle(cornerRadius: 10))
-//        .overlay( // Add thin light gray border
-//            RoundedRectangle(cornerRadius: 10)
-//                .stroke(Color.gray.opacity(0.5), lineWidth: 1)
-//        )
+        .modifier(GlowingBorder())
         .onAppear {
             isFocused = true
             // Set up window delegate
@@ -122,6 +115,40 @@ struct QuickInputView: View {
                 windowDelegate = nil
             }
         }
+    }
+}
+
+struct GlowingBorder: ViewModifier {
+    @State private var phase: CGFloat = 0
+    
+    let colors = [Color.blue, Color.purple, Color.pink, Color.orange, Color.blue]
+    
+    func body(content: Content) -> some View {
+        content
+            .background(
+                ZStack {
+                    VisualEffectView(material: .hudWindow, blendingMode: .behindWindow)
+                    Color.black.opacity(0.4)
+                }
+            )
+            .clipShape(RoundedRectangle(cornerRadius: 10))
+            .overlay(
+                RoundedRectangle(cornerRadius: 10)
+                    .strokeBorder(
+                        AngularGradient(
+                            colors: colors,
+                            center: .center,
+                            angle: .degrees(phase)
+                        ),
+                        lineWidth: 2
+                    )
+            )
+            .shadow(color: Color.blue.opacity(0.5), radius: 10, x: 0, y: 0)
+            .onAppear {
+                withAnimation(.linear(duration: 3).repeatForever(autoreverses: false)) {
+                    phase = 360
+                }
+            }
     }
 }
 

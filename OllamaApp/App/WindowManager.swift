@@ -173,7 +173,7 @@ class WindowManager: ObservableObject {
         let hostingView = NSHostingView(rootView: contentView)
         let panel = QuickInputPanel(
             contentRect: rectSize,
-            styleMask: [.nonactivatingPanel, .borderless],
+            styleMask: [.nonactivatingPanel, .borderless, .fullSizeContentView],
             backing: .buffered,
             defer: false
         )
@@ -186,7 +186,7 @@ class WindowManager: ObservableObject {
             window.isOpaque = false
             window.level = .floating
             window.isMovableByWindowBackground = true
-            window.hasShadow = true
+            window.hasShadow = false
             
             // Set up the hosting view first
             hostingView.frame = rectSize
@@ -218,7 +218,10 @@ class WindowManager: ObservableObject {
         popupWindow = nil
     }
     
-    func closeQuickInputWindow() {
+    func closeQuickInputWindow(clearText: Bool = false) {
+        if clearText {
+            windowStateManager?.quickInputText = ""
+        }
         quickInputWindow?.close()
         quickInputWindow = nil
     }
