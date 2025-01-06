@@ -12,7 +12,7 @@ struct QuickInputView: View {
         let text = Text(inputText.isEmpty ? "Ask anything... (use @code, @image, or @chat)" : "")
             .foregroundColor(.gray)
         
-        if inputText.isEmpty { 
+        if inputText.isEmpty {
             return AnyView(text)
         }
         
@@ -30,7 +30,6 @@ struct QuickInputView: View {
                     
                     finalText = beforeTag + Text(tag.rawValue)
                         .foregroundColor(.blue)
-                        .fontWeight(.bold)
                     
                     currentIndex = tagEnd
                     foundTag = true
@@ -53,9 +52,9 @@ struct QuickInputView: View {
             ZStack(alignment: .leading) {
                 TextField("", text: $inputText)
                     .textFieldStyle(.plain)
-                    .font(.system(size: 20))
+                    .font(.system(size: 20, design: .monospaced))
                     .focused($isFocused)
-                    .opacity(0.01) // Just enough to show cursor
+                    .foregroundColor(.clear) // Make text invisible but keep cursor
                     .scrollDisabled(true)
                     .frame(height: 40)
                     .onSubmit {
@@ -84,7 +83,7 @@ struct QuickInputView: View {
                     }
                 
                 highlightedText()
-                    .font(.system(size: 20))
+                    .font(.system(size: 20, design: .monospaced))
                     .allowsHitTesting(false)
             }
             
