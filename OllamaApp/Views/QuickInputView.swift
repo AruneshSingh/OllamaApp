@@ -1,16 +1,18 @@
 import SwiftUI
+import AppKit
 
 struct QuickInputView: View {
     @ObservedObject var windowManager: WindowStateManager
     @ObservedObject var chatViewModel: ChatViewModel
     @State private var inputText = ""
     @FocusState private var isFocused: Bool
+    @State private var windowDelegate: QuickInputWindowDelegate? = nil
     
     private func highlightedText() -> some View {
         let text = Text(inputText.isEmpty ? "Ask anything... (use @code, @image, or @chat)" : "")
             .foregroundColor(.gray)
         
-        if inputText.isEmpty {
+        if inputText.isEmpty { 
             return AnyView(text)
         }
         
@@ -93,5 +95,28 @@ struct QuickInputView: View {
         .padding(.horizontal, 24)
         .padding(.vertical, 32)
         .frame(maxWidth: .infinity)
+        .onAppear {
+            isFocused = true
+            // Set up window delegate
+            DispatchQueue.main.async {
+                if let window = NSApp.windows.first(where: { $0.isKeyWindow }) {
+                    windowDelegate = QuickInputWindowDelegate()
+                    window.delegate = windowDelegate
+                }
+            }
+        }
+        .onDisappear {
+            // Clean up window delegate
+            if let window = NSApp.windows.first(where: { $0.delegate === windowDelegate }) {
+                window.delegate = nil
+                windowDelegate = nil
+            }
+        }
+    }
+}
+
+class QuickInputWindowDelegate: NSObject, NSWindowDelegate {
+    func windowDidResignKey(_ notification: Notification) {
+        WindowManager.shared.closeQuickInputWindow()
     }
 }
