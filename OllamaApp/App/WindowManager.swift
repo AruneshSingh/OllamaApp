@@ -181,15 +181,6 @@ class WindowManager: ObservableObject {
         quickInputWindow = panel
         
         if let window = quickInputWindow {
-            // Create and configure visual effect view first
-            let visualEffectView = NSVisualEffectView()
-            visualEffectView.material = .hudWindow
-            visualEffectView.blendingMode = .behindWindow
-            visualEffectView.state = .active
-            visualEffectView.wantsLayer = true
-            visualEffectView.layer?.cornerRadius = 10
-            visualEffectView.layer?.backgroundColor = NSColor.black.withAlphaComponent(0.7).cgColor
-            
             // Configure the window
             window.backgroundColor = .clear
             window.isOpaque = false
@@ -200,13 +191,8 @@ class WindowManager: ObservableObject {
             // Set up the hosting view first
             hostingView.frame = rectSize
             
-            // Set up the visual effect view frame
-            visualEffectView.frame = rectSize
-            
-            // Add views in the correct order
-            window.contentView = NSView(frame: rectSize)
-            window.contentView?.addSubview(visualEffectView)
-            window.contentView?.addSubview(hostingView)
+            // Set up the window's content view
+            window.contentView = hostingView
             
             // Center the window
             if let screen = NSScreen.main {

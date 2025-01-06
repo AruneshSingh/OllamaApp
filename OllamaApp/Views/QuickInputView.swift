@@ -91,8 +91,20 @@ struct QuickInputView: View {
                 .padding(.trailing, 8)
         }
         .padding(.horizontal, 24)
-        .padding(.vertical, 32)
+        .padding(.vertical, 24)
         .frame(maxWidth: .infinity)
+        .background(
+            // Add blur effect behind the black background
+            ZStack {
+                VisualEffectView(material: .hudWindow, blendingMode: .behindWindow)
+                Color.black.opacity(0.4) // Slightly reduced opacity to show blur
+            }
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 10))
+//        .overlay( // Add thin light gray border
+//            RoundedRectangle(cornerRadius: 10)
+//                .stroke(Color.gray.opacity(0.5), lineWidth: 1)
+//        )
         .onAppear {
             isFocused = true
             // Set up window delegate
@@ -116,5 +128,23 @@ struct QuickInputView: View {
 class QuickInputWindowDelegate: NSObject, NSWindowDelegate {
     func windowDidResignKey(_ notification: Notification) {
         WindowManager.shared.closeQuickInputWindow()
+    }
+}
+
+struct VisualEffectView: NSViewRepresentable {
+    let material: NSVisualEffectView.Material
+    let blendingMode: NSVisualEffectView.BlendingMode
+    
+    func makeNSView(context: Context) -> NSVisualEffectView {
+        let visualEffectView = NSVisualEffectView()
+        visualEffectView.material = material
+        visualEffectView.blendingMode = blendingMode
+        visualEffectView.state = .active
+        return visualEffectView
+    }
+    
+    func updateNSView(_ visualEffectView: NSVisualEffectView, context: Context) {
+        visualEffectView.material = material
+        visualEffectView.blendingMode = blendingMode
     }
 }
