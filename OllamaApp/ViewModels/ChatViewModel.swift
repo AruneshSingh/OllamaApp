@@ -195,10 +195,15 @@ class ChatViewModel: ObservableObject {
     }
 
     private func extractTag(from content: String) -> (tag: String?, message: String) {
-        for tag in TaggedModel.allCases {
-            if content.hasPrefix(tag.rawValue) {
-                let cleanMessage = content.replacingOccurrences(of: tag.rawValue, with: "").trimmingCharacters(in: .whitespaces)
-                return (tag.rawValue, cleanMessage)
+        let words = content.split(separator: " ")
+        
+        for word in words {
+            for tag in TaggedModel.allCases {
+                if word == tag.rawValue {
+                    // Remove the tag from the content
+                    let cleanMessage = content.replacingOccurrences(of: tag.rawValue, with: "").trimmingCharacters(in: .whitespaces)
+                    return (tag.rawValue, cleanMessage)
+                }
             }
         }
         return (nil, content)
