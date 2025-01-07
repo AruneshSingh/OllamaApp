@@ -12,18 +12,22 @@ class ChatSession {
     @Relationship(deleteRule: .cascade)
     var messages: [Message] = []
     
+    var currentContext: [Int]?
+    
     init(id: UUID = UUID(),
          date: Date = Date(),
          lastUpdated: Date = Date(),
          title: String,
          modelName: String,
-         messages: [Message] = []) {
+         messages: [Message] = [],
+         currentContext: [Int]? = nil) {
         self.id = id
         self.date = date
         self.lastUpdated = lastUpdated
         self.title = title
         self.modelName = modelName
         self.messages = messages
+        self.currentContext = currentContext
         // Link messages to this chat
         messages.forEach { $0.chat = self }
     }
@@ -70,5 +74,3 @@ struct GenerateResponse: Codable {
     let response: String
     let done: Bool
 }
-
-// End of file. No additional code.

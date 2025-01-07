@@ -7,12 +7,12 @@ class Message {
     var role: String
     var content: String
     var chat: ChatSession?
+    var context: [Int]?
     
-    init(id: UUID = UUID(), role: String, content: String) {
+    init(id: UUID = UUID(), role: String, content: String, context: [Int]? = nil) {
         self.id = id
         self.role = role
         self.content = content
+        self.context = context
     }
 }
-
-// End of file. No additional code.

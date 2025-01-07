@@ -221,6 +221,40 @@ class ChatViewModel: ObservableObject {
         return !tagModel.isEmpty ? tagModel : selectedModel
     }
     
+    private struct GenerateRequest: Codable {
+        let model: String
+        let prompt: String
+        let stream: Bool
+        let context: [Int]?
+    }
+
+    private struct GenerateResponse: Codable {
+        let response: String
+        let context: [Int]?
+        let done: Bool
+    }
+
+    private var lastContext: [Int]? {
+        get {
+            if let currentId = currentSessionId,
+               let session = try? container.mainContext.fetch(FetchDescriptor<ChatSession>(
+                predicate: #Predicate<ChatSession> { $0.id == currentId }
+               )).first {
+                return session.currentContext
+            }
+            return nil
+        }
+        set {
+            if let currentId = currentSessionId,
+               let session = try? container.mainContext.fetch(FetchDescriptor<ChatSession>(
+                predicate: #Predicate<ChatSession> { $0.id == currentId }
+               )).first {
+                session.currentContext = newValue
+                try? container.mainContext.save()
+            }
+        }
+    }
+
     func sendMessage(content: String, model: String? = nil) {
         let (detectedTag, cleanMessage) = extractTag(from: content)
         let modelToUse = model ?? getModelForTag(detectedTag)
@@ -241,7 +275,12 @@ class ChatViewModel: ObservableObject {
             return
         }
         
-        let requestBody = GenerateRequest(model: modelToUse, prompt: cleanMessage, stream: true)
+        let requestBody = GenerateRequest(
+            model: modelToUse,
+            prompt: cleanMessage,
+            stream: true,
+            context: lastContext
+        )
         
         Task {
             guard await checkOllamaConnection() else {
@@ -276,10 +315,18 @@ class ChatViewModel: ObservableObject {
                     if let data = line.data(using: .utf8),
                        let generateResponse = try? JSONDecoder().decode(GenerateResponse.self, from: data) {
                         fullResponse += generateResponse.response
+                        if let context = generateResponse.context {
+                            lastContext = context // This will now update the last message's context
+                        }
                     }
                 }
                 
-                let assistantMessage = Message(id: UUID(), role: "assistant", content: fullResponse)
+                let assistantMessage = Message(
+                    id: UUID(),
+                    role: "assistant",
+                    content: fullResponse,
+                    context: lastContext // Store context with the message
+                )
                 container.mainContext.insert(assistantMessage)
                 messages.append(assistantMessage)
                 saveChatSession()
@@ -328,6 +375,7 @@ class ChatViewModel: ObservableObject {
         currentSessionId = session.id
         selectedModel = availableModels.contains(session.modelName) ? session.modelName : selectedModel
         isNewChat = false
+        // lastContext will now be automatically set from the last message's context
         objectWillChange.send()
     }
     
@@ -335,6 +383,7 @@ class ChatViewModel: ObservableObject {
         messages = []
         currentSessionId = nil
         isNewChat = true
+        lastContext = nil
         
         let descriptor = FetchDescriptor<AppSettings>()
         if let settings = try? container.mainContext.fetch(descriptor).first,
