@@ -9,6 +9,7 @@ class ChatViewModel: ObservableObject {
     @Published var isLoading = false
     @Published var isNewChat: Bool = true
     @Published var connectionError: String? = nil
+    @Published var isStreaming = false
     
     private let baseURL = "http://localhost:11434/api"
     let container: ModelContainer
@@ -294,51 +295,74 @@ class ChatViewModel: ObservableObject {
                 request.setValue("application/json", forHTTPHeaderField: "Content-Type")
                 request.httpBody = try JSONEncoder().encode(requestBody)
                 
-                let (data, response) = try await URLSession.shared.data(for: request)
+                // Create a new message for the assistant's response
+                let assistantMessage = Message(
+                    id: UUID(),
+                    role: "assistant",
+                    content: "",
+                    context: nil
+                )
+                container.mainContext.insert(assistantMessage)
+                await MainActor.run {
+                    messages.append(assistantMessage)
+                }
+                
+                let (bytes, response) = try await URLSession.shared.bytes(for: request)
                 
                 guard let httpResponse = response as? HTTPURLResponse else {
                     connectionError = "Invalid server response"
                     isLoading = false
+                    isStreaming = false
                     return
                 }
                 
                 guard httpResponse.statusCode == 200 else {
                     connectionError = "Server error: \(httpResponse.statusCode)"
                     isLoading = false
+                    isStreaming = false
                     return
                 }
                 
-                let responseString = String(decoding: data, as: UTF8.self)
-                var fullResponse = ""
+                var responseBuffer = ""
+                var firstTokenReceived = false
                 
-                responseString.split(separator: "\n").forEach { line in
+                for try await line in bytes.lines {
                     if let data = line.data(using: .utf8),
                        let generateResponse = try? JSONDecoder().decode(GenerateResponse.self, from: data) {
-                        fullResponse += generateResponse.response
-                        if let context = generateResponse.context {
-                            lastContext = context // This will now update the last message's context
+                        responseBuffer += generateResponse.response
+                        
+                        await MainActor.run {
+                            if !firstTokenReceived {
+                                firstTokenReceived = true
+                                isLoading = false
+                                isStreaming = true
+                            }
+                            
+                            assistantMessage.content = responseBuffer
+                            if let context = generateResponse.context {
+                                assistantMessage.context = context
+                                self.lastContext = context
+                            }
+                            self.objectWillChange.send()
+                        }
+                        
+                        if generateResponse.done {
+                            await MainActor.run {
+                                isStreaming = false
+                                saveChatSession()
+                            }
                         }
                     }
                 }
                 
-                let assistantMessage = Message(
-                    id: UUID(),
-                    role: "assistant",
-                    content: fullResponse,
-                    context: lastContext // Store context with the message
-                )
-                container.mainContext.insert(assistantMessage)
-                messages.append(assistantMessage)
-                saveChatSession()
-                objectWillChange.send()
-                
             } catch {
                 connectionError = "Error sending message: \(error.localizedDescription)"
+                isLoading = false
+                isStreaming = false
             }
-            isLoading = false
         }
     }
-    
+
     func saveChatSession() {
         guard !selectedModel.isEmpty else { return }
         

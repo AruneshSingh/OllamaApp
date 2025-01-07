@@ -79,10 +79,6 @@ struct PopupContentView: View {
                             .id(message.id)
                     }
                     
-                    if chatViewModel.isLoading {
-                        LoadingView()
-                    }
-                    
                     Color.clear
                         .frame(height: 1)
                         .id(bottomID)
@@ -91,6 +87,11 @@ struct PopupContentView: View {
             }
             .onChange(of: chatViewModel.messages.count, initial: false) { oldValue, newValue in
                 scrollToBottom(proxy: proxy)
+            }
+            .onChange(of: chatViewModel.messages.last?.content) { _, _ in
+                if chatViewModel.isStreaming {
+                    scrollToBottom(proxy: proxy)
+                }
             }
         }
     }

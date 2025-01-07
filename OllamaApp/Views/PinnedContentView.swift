@@ -59,9 +59,6 @@ struct PinnedContentView: View {
                             MessageView(message: message)
                         }
                         
-                        if chatViewModel.isLoading {
-                            LoadingView()
-                        }
                         
                         Color.clear
                             .frame(height: 1)
@@ -71,6 +68,13 @@ struct PinnedContentView: View {
                 .onChange(of: chatViewModel.messages) { oldValue, newValue in
                     withAnimation {
                         proxy.scrollTo(bottomID, anchor: .bottom)
+                    }
+                }
+                .onChange(of: chatViewModel.messages.last?.content) { _, _ in
+                    if chatViewModel.isStreaming {
+                        withAnimation {
+                            proxy.scrollTo(bottomID, anchor: .bottom)
+                        }
                     }
                 }
             }

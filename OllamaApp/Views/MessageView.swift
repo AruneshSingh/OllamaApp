@@ -2,6 +2,7 @@ import SwiftUI
 
 struct MessageView: View {
     let message: Message
+    let isStreaming: Bool = false
     
     private var backgroundColor: Color {
         message.role == "user" ? Color.blue.opacity(0.1) : Color.gray.opacity(0.1)
@@ -18,9 +19,14 @@ struct MessageView: View {
                 .foregroundColor(.secondary)
                 .accessibilityHidden(true)
             
-            Text(message.content)
-                .textSelection(.enabled)
-                .fixedSize(horizontal: false, vertical: true)
+            if message.content.isEmpty && message.role == "assistant" {
+                LoadingView()
+            } else {
+                Text(message.content)
+                    .textSelection(.enabled)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .animation(.easeInOut, value: message.content)
+            }
         }
         .padding(8)
         .frame(maxWidth: .infinity, alignment: .leading)
