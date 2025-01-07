@@ -6,6 +6,7 @@ struct PinnedContentView: View {
     @ObservedObject var chatViewModel: ChatViewModel
     @State private var userInput: String = ""
     @State private var showSettings = false
+    @State private var isHovered = false
     @Namespace private var bottomID
     
     private func sendMessage() {
@@ -16,66 +17,90 @@ struct PinnedContentView: View {
         userInput = ""
     }
     
+    private var lastTwoMessages: [Message] {
+        Array(chatViewModel.messages.suffix(2))
+    }
+    
     var body: some View {
-        VStack(spacing: 12) {
-            // Header with settings and history buttons
-            HStack {
-                Text("Better AI interface")
-                    .font(.headline)
-                
-                Spacer()
-                
-                Button(action: { chatViewModel.startNewChat() }) {
-                    Image(systemName: "square.and.pencil")
-                }
-                .help("Start new chat")
-                
-                Picker("Model", selection: Binding(
-                    get: { chatViewModel.selectedModel },
-                    set: { chatViewModel.selectedModel = $0 }
-                )) {
-                    ForEach(chatViewModel.availableModels, id: \.self) { model in
-                        Text(model).tag(model)
+        VStack(spacing: 0) {
+            if isHovered {
+                // Expanded view with full chat history
+                VStack(spacing: 12) {
+                    // Header with settings and history buttons
+                    HStack {
+                        Text("Better AI interface")
+                            .font(.headline)
+                        
+                        Spacer()
+                        
+                        Button(action: { chatViewModel.startNewChat() }) {
+                            Image(systemName: "square.and.pencil")
+                        }
+                        .help("Start new chat")
+                        
+                        Picker("Model", selection: Binding(
+                            get: { chatViewModel.selectedModel },
+                            set: { chatViewModel.selectedModel = $0 }
+                        )) {
+                            ForEach(chatViewModel.availableModels, id: \.self) { model in
+                                Text(model).tag(model)
+                            }
+                        }
+                        .pickerStyle(.menu)
+                        
+                        Button(action: { windowManager.showHistory.toggle() }) {
+                            Image(systemName: "clock.arrow.circlepath")
+                        }
+                        .help("Show chat history")
+                        
+                        Button(action: { showSettings.toggle() }) {
+                            Image(systemName: "gear")
+                        }
+                        .help("Settings")
+                    }
+                    
+                    ScrollViewReader { proxy in
+                        ScrollView {
+                            LazyVStack(alignment: .leading, spacing: 8) {
+                                ForEach(chatViewModel.messages) { message in
+                                    MessageView(message: message)
+                                        .transition(.opacity)
+                                }
+                                
+                                if chatViewModel.isLoading {
+                                    LoadingView()
+                                }
+                                
+                                Color.clear
+                                    .frame(height: 1)
+                                    .id(bottomID)
+                            }
+                            .padding(.horizontal)
+                        }
+                        .frame(height: 400)
+                        .onChange(of: chatViewModel.messages) { oldValue, newValue in
+                            withAnimation {
+                                proxy.scrollTo(bottomID, anchor: .bottom)
+                            }
+                        }
                     }
                 }
-                .pickerStyle(.menu)
-                
-                Button(action: { windowManager.showHistory.toggle() }) {
-                    Image(systemName: "clock.arrow.circlepath")
+                .transition(.opacity)
+            } else {
+                // Collapsed view with stacked cards
+                VStack(spacing: 4) {
+                    ForEach(lastTwoMessages) { message in
+                        MessageView(message: message)
+                            .scaleEffect(0.9)
+                            .opacity(0.9)
+                    }
                 }
-                .help("Show chat history")
-                
-                Button(action: { showSettings.toggle() }) {
-                    Image(systemName: "gear")
-                }
-                .help("Settings")
+                .frame(maxHeight: 150)
+                .padding(.horizontal)
+                .transition(.opacity)
             }
             
-            // Chat content - Remove fixed height to allow window resizing
-            ScrollViewReader { proxy in
-                ScrollView {
-                    LazyVStack(alignment: .leading, spacing: 8) {
-                        ForEach(chatViewModel.messages) { message in
-                            MessageView(message: message)
-                        }
-                        
-                        if chatViewModel.isLoading {
-                            LoadingView()
-                        }
-                        
-                        Color.clear
-                            .frame(height: 1)
-                            .id(bottomID)
-                    }
-                }
-                .onChange(of: chatViewModel.messages) { oldValue, newValue in
-                    withAnimation {
-                        proxy.scrollTo(bottomID, anchor: .bottom)
-                    }
-                }
-            }
-            
-            // Input area
+            // Input area always visible
             HStack {
                 TextField("Ask a question...", text: $userInput)
                     .textFieldStyle(.roundedBorder)
@@ -84,17 +109,39 @@ struct PinnedContentView: View {
                         sendMessage()
                     }
                 
-                Button("Send") {
-                    sendMessage()
+                Picker("", selection: $chatViewModel.selectedModel) {
+                    ForEach(chatViewModel.availableModels, id: \.self) { model in
+                        Text(model).tag(model)
+                    }
+                }
+                .pickerStyle(.menu)
+                .frame(width: 30)
+                
+                Button(action: sendMessage) {
+                    Image(systemName: "arrow.up.circle.fill")
+                        .font(.title2)
                 }
                 .disabled(userInput.isEmpty ||
                          chatViewModel.selectedModel.isEmpty ||
                          chatViewModel.isLoading)
             }
-            .padding(.bottom, 8)
+            .padding(8)
         }
-        .padding()
-        .frame(minHeight: 500) // Add minimum height constraint
+        .padding(.vertical, 8)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color.black.opacity(0.6))
+                .shadow(radius: 5)
+        )
+        .onHover { hovering in
+            withAnimation(.easeInOut(duration: 0.2)) {
+                isHovered = hovering
+            }
+        }
+        .frame(minHeight: 500)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
+        .padding(.trailing, 20)
+        .padding(.bottom, 20)
         .sheet(isPresented: $windowManager.showHistory) {
             HistoryView(
                 viewModel: chatViewModel,

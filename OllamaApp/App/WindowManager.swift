@@ -110,21 +110,36 @@ class WindowManager: ObservableObject {
                 .modelContainer(chatViewModel.container)
             
             let hostingView = NSHostingView(rootView: contentView)
-            pinnedWindow = WindowConfiguration.createWindow(
-                title: "Better AI interface",
-                contentView: hostingView,
-                isPinned: true
+            hostingView.autoresizingMask = [.width, .height]
+            
+            // Create a panel instead of a window for better floating behavior
+            let panel = NSPanel(
+                contentRect: NSRect(x: 0, y: 0, width: 400, height: 100),
+                styleMask: [.nonactivatingPanel, .titled, .resizable, .fullSizeContentView],
+                backing: .buffered,
+                defer: false
             )
             
-            if let window = pinnedWindow {
-                window.level = .floating
-                window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
-                window.setFrameAutosaveName("OllamaWindow")
-                window.backgroundColor = NSColor.black.withAlphaComponent(0.6)
-                window.styleMask.insert(.resizable)
+            panel.contentView = hostingView
+            panel.titleVisibility = .hidden
+            panel.titlebarAppearsTransparent = true
+            panel.isMovableByWindowBackground = true
+            panel.level = .floating
+            panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
+            panel.setFrameAutosaveName("OllamaWindow")
+            panel.backgroundColor = .clear
+            panel.isOpaque = false
+            panel.hasShadow = false
+            
+            // Position panel at bottom right of the screen
+            if let screen = NSScreen.main {
+                let screenFrame = screen.visibleFrame
+                let xPosition = screenFrame.maxX - 420 // 400 width + 20 padding
+                let yPosition = screenFrame.minY + 20
+                panel.setFrameOrigin(CGPoint(x: xPosition, y: yPosition))
             }
-        } else {
-            windowStateManager.isPinned = true
+            
+            pinnedWindow = panel
         }
     }
     
@@ -132,7 +147,8 @@ class WindowManager: ObservableObject {
         createPinnedWindowIfNeeded()
         
         if let window = pinnedWindow {
-            WindowConfiguration.showWindow(window)
+            window.orderFront(nil)
+            NSApp.activate(ignoringOtherApps: true)
         }
     }
     

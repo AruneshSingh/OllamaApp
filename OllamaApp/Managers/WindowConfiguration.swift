@@ -11,10 +11,13 @@ struct WindowConfiguration {
         size: NSSize = NSSize(width: 400, height: 600),
         isPinned: Bool = false
     ) -> NSWindow {
-        // Create the window
+        // Create the window with borderless style for pinned view
+        let styleMask: NSWindow.StyleMask = isPinned ? 
+            [.borderless] : [.titled, .closable, .miniaturizable, .resizable]
+        
         let window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: size.width, height: size.height),
-            styleMask: [.titled, .closable, .miniaturizable, .resizable],
+            styleMask: styleMask,
             backing: .buffered,
             defer: false
         )
@@ -22,15 +25,22 @@ struct WindowConfiguration {
         // Basic window setup
         window.title = title
         window.center()
-        window.minSize = NSSize(width: 300, height: 500)
-        window.maxSize = NSSize(width: 800, height: 1000)
+        
+        // Set size constraints based on window type
+        if isPinned {
+            window.minSize = NSSize(width: 300, height: 100)
+            window.maxSize = NSSize(width: 500, height: 800)
+        } else {
+            window.minSize = NSSize(width: 300, height: 500)
+            window.maxSize = NSSize(width: 800, height: 1000)
+        }
+        
         window.isReleasedWhenClosed = false
         
         // Window appearance
-        window.backgroundColor = NSColor.black.withAlphaComponent(0.6)
+        window.backgroundColor = .clear // Make the window completely transparent
         window.isOpaque = false
-        window.hasShadow = true
-        window.appearance = NSAppearance(named: .vibrantDark)
+        window.hasShadow = false // Remove window shadow for pinned view
         
         // Configure visual effect
         if let windowContentView = window.contentView {
@@ -68,5 +78,3 @@ struct WindowConfiguration {
         window.orderFrontRegardless()
     }
 }
-
-// End of file
