@@ -2,7 +2,7 @@ import Foundation
 import SwiftData
 
 @Model
-class ChatSession {
+final class ChatSession {
     var id: UUID
     var date: Date
     var lastUpdated: Date
@@ -12,7 +12,21 @@ class ChatSession {
     @Relationship(deleteRule: .cascade)
     var messages: [Message] = []
     
-    var currentContext: [Int]?
+    private var contextData: Data?
+    
+    var currentContext: [Int]? {
+        get {
+            guard let contextData else { return nil }
+            return try? JSONDecoder().decode([Int].self, from: contextData)
+        }
+        set {
+            if let newValue {
+                contextData = try? JSONEncoder().encode(newValue)
+            } else {
+                contextData = nil
+            }
+        }
+    }
     
     init(id: UUID = UUID(),
          date: Date = Date(),
@@ -27,7 +41,9 @@ class ChatSession {
         self.title = title
         self.modelName = modelName
         self.messages = messages
-        self.currentContext = currentContext
+        if let currentContext {
+            self.contextData = try? JSONEncoder().encode(currentContext)
+        }
         // Link messages to this chat
         messages.forEach { $0.chat = self }
     }
