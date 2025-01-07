@@ -51,7 +51,7 @@ struct QuickInputView: View {
             ZStack(alignment: .leading) {
                 TextField("", text: $windowManager.quickInputText)
                     .textFieldStyle(.plain)
-                    .font(.system(size: 20, design: .monospaced))
+                    .font(.system(size: 16, design: .monospaced))
                     .focused($isFocused)
                     .foregroundColor(.clear) // Make text invisible but keep cursor
                     .scrollDisabled(true)
@@ -86,7 +86,7 @@ struct QuickInputView: View {
                     }
                 
                 highlightedText()
-                    .font(.system(size: 20, design: .monospaced))
+                    .font(.system(size: 16, design: .monospaced))
                     .allowsHitTesting(false)
             }
             
@@ -94,8 +94,8 @@ struct QuickInputView: View {
                 .foregroundColor(.gray)
                 .padding(.trailing, 8)
         }
-        .padding(.horizontal, 24)
-        .padding(.vertical, 24)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
         .frame(maxWidth: .infinity)
         .modifier(GlowingBorder())
         .onAppear {
