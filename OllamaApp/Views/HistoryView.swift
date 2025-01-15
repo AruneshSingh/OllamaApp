@@ -3,6 +3,8 @@ import SwiftUI
 struct HistoryView: View {
     @ObservedObject var viewModel: ChatViewModel
     @Binding var showHistory: Bool
+    @State private var sessionToRename: ChatSession?
+    @State private var newTitle: String = ""
     
     // MARK: - Private Views
     
@@ -17,7 +19,26 @@ struct HistoryView: View {
     private func chatSessionRow(_ session: ChatSession) -> some View {
         Button(action: { selectSession(session) }) {
             VStack(alignment: .leading, spacing: Layout.spacing) {
-                titleRow(session)
+                HStack {
+                    titleRow(session)
+                    Spacer()
+                    Menu {
+                        Button(action: {
+                            sessionToRename = session
+                            newTitle = session.title
+                        }) {
+                            Label("Rename", systemImage: "pencil")
+                        }
+                        Button(role: .destructive, action: {
+                            deleteSession(session)
+                        }) {
+                            Label("Delete", systemImage: "trash")
+                        }
+                    } label: {
+                        Image(systemName: "ellipsis.circle")
+                            .foregroundColor(.secondary)
+                    }
+                }
                 modelInfo(session)
                 SessionMetadata(session: session)
             }
@@ -47,10 +68,38 @@ struct HistoryView: View {
             content
                 .navigationTitle("Chat History")
                 .toolbar { toolbarContent }
+                .sheet(item: $sessionToRename) { session in
+                    renameSessionView(session)
+                }
         }
         .frame(width: Layout.frameWidth, height: Layout.frameHeight)
     }
     
+    // Add rename session view
+    private func renameSessionView(_ session: ChatSession) -> some View {
+        NavigationStack {
+            Form {
+                TextField("Chat Title", text: $newTitle)
+            }
+            .navigationTitle("Rename Chat")
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") {
+                        sessionToRename = nil
+                    }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") {
+                        renameSession(session, to: newTitle)
+                        sessionToRename = nil
+                    }
+                    .disabled(newTitle.isEmpty)
+                }
+            }
+        }
+        .frame(width: 300, height: 150)
+    }
+
     // MARK: - Private Views
     private var content: some View {
         Group {
@@ -110,6 +159,17 @@ struct HistoryView: View {
         withAnimation {
             viewModel.clearAllHistory()
         }
+    }
+
+    // Add these new methods
+    private func deleteSession(_ session: ChatSession) {
+        withAnimation {
+            viewModel.deleteSession(session)
+        }
+    }
+    
+    private func renameSession(_ session: ChatSession, to newTitle: String) {
+        viewModel.renameSession(session, to: newTitle)
     }
 }
 

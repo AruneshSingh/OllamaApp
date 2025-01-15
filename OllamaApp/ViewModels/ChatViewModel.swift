@@ -425,4 +425,24 @@ class ChatViewModel: ObservableObject {
             try? container.mainContext.save()
         }
     }
+    
+    func deleteSession(_ session: ChatSession) {
+        container.mainContext.delete(session)
+        try? container.mainContext.save()
+        
+        // If we deleted the current session, start a new chat
+        if session.id == currentSessionId {
+            startNewChat()
+        }
+        
+        objectWillChange.send()
+    }
+    
+    func renameSession(_ session: ChatSession, to newTitle: String) {
+        guard !newTitle.isEmpty else { return }
+        session.title = newTitle
+        session.lastUpdated = Date()
+        try? container.mainContext.save()
+        objectWillChange.send()
+    }
 }
