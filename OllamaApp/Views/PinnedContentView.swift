@@ -2,7 +2,7 @@ import SwiftUI
 
 // Pinned window view with settings and history buttons
 struct PinnedContentView: View {
-    @ObservedObject var windowManager: WindowStateManager
+    @StateObject private var windowManager = WindowManager.shared
     @ObservedObject var chatViewModel: ChatViewModel
     @State private var userInput: String = ""
     @State private var showSettings = false
@@ -51,7 +51,7 @@ struct PinnedContentView: View {
                 .help("Settings")
             }
             
-            // Chat content - Remove fixed height to allow window resizing
+            // Chat content
             ScrollViewReader { proxy in
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: 8) {
@@ -59,13 +59,12 @@ struct PinnedContentView: View {
                             MessageView(message: message)
                         }
                         
-                        
                         Color.clear
                             .frame(height: 1)
                             .id(bottomID)
                     }
                 }
-                .onChange(of: chatViewModel.messages) { oldValue, newValue in
+                .onChange(of: chatViewModel.messages) { _, _ in
                     withAnimation {
                         proxy.scrollTo(bottomID, anchor: .bottom)
                     }
@@ -98,7 +97,7 @@ struct PinnedContentView: View {
             .padding(.bottom, 8)
         }
         .padding()
-        .frame(minHeight: 500) // Add minimum height constraint
+        .frame(minHeight: 500)
         .sheet(isPresented: $windowManager.showHistory) {
             HistoryView(
                 viewModel: chatViewModel,

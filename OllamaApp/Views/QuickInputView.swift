@@ -2,7 +2,7 @@ import SwiftUI
 import AppKit
 
 struct QuickInputView: View {
-    @ObservedObject var windowManager: WindowStateManager
+    @StateObject private var windowManager = WindowManager.shared
     @ObservedObject var chatViewModel: ChatViewModel
     @FocusState private var isFocused: Bool
     @State private var windowDelegate: QuickInputWindowDelegate? = nil
@@ -47,26 +47,21 @@ struct QuickInputView: View {
     
     var body: some View {
         HStack {
-            // Create a ZStack with TextField at the bottom and styled text overlay
             ZStack(alignment: .leading) {
                 TextField("", text: $windowManager.quickInputText)
                     .textFieldStyle(.plain)
                     .font(.system(size: 16, design: .monospaced))
                     .focused($isFocused)
-                    .foregroundColor(.clear) // Make text invisible but keep cursor
+                    .foregroundColor(.clear)
                     .scrollDisabled(true)
                     .frame(height: 40)
-                    .task {
-                        // Focus immediately when the view appears
-                        isFocused = true
-                    }
                     .onSubmit {
                         if !windowManager.quickInputText.isEmpty {
                             let messageText = windowManager.quickInputText
-                            WindowManager.shared.closeQuickInputWindow(clearText: true)
+                            windowManager.closeQuickInputWindow(clearText: true)
                             chatViewModel.startNewChat()
                             chatViewModel.sendMessage(content: messageText)
-                            WindowManager.shared.showPinnedWindow()
+                            windowManager.showPinnedWindow()
                         }
                     }
                     .onChange(of: windowManager.quickInputText) { _, newValue in
@@ -74,10 +69,10 @@ struct QuickInputView: View {
                             windowManager.quickInputText = newValue.replacingOccurrences(of: "\n", with: "")
                             if !windowManager.quickInputText.isEmpty {
                                 let messageText = windowManager.quickInputText
-                                WindowManager.shared.closeQuickInputWindow(clearText: true)
+                                windowManager.closeQuickInputWindow(clearText: true)
                                 chatViewModel.startNewChat()
                                 chatViewModel.sendMessage(content: messageText)
-                                WindowManager.shared.showPinnedWindow()
+                                windowManager.showPinnedWindow()
                             }
                         }
                     }
@@ -99,8 +94,10 @@ struct QuickInputView: View {
         .frame(maxWidth: .infinity)
         .modifier(GlowingBorder())
         .onAppear {
-            isFocused = true
-            // Set up window delegate
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                isFocused = true
+            }
+            
             DispatchQueue.main.async {
                 if let window = NSApp.windows.first(where: { $0.isKeyWindow }) {
                     windowDelegate = QuickInputWindowDelegate()
@@ -108,8 +105,10 @@ struct QuickInputView: View {
                 }
             }
         }
+        .task {
+            isFocused = true
+        }
         .onDisappear {
-            // Clean up window delegate
             if let window = NSApp.windows.first(where: { $0.delegate === windowDelegate }) {
                 window.delegate = nil
                 windowDelegate = nil

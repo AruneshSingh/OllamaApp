@@ -1,90 +1,54 @@
 import SwiftUI
 import SwiftData
-import Accessibility
-
-// Added schema version and migration support
-let schema = Schema([AppSettings.self])
-let modelConfiguration = ModelConfiguration(
-    schema: schema,
-    isStoredInMemoryOnly: false,
-    allowsSave: true
-)
 
 @main
 struct OllamaMenuBarApp: App {
     @StateObject private var chatViewModel: ChatViewModel
-    @StateObject private var windowManager: WindowStateManager
     @StateObject private var diContainer: DIContainer
     private let initializedContainer: ModelContainer
     
     init() {
-        // Register the dictionary transformer
         DictionaryTransformer.register()
         
-        // Initialize container first
         do {
             initializedContainer = try DIContainer.shared.databaseService.setupModelContainer()
         } catch {
             fatalError("Failed to initialize container: \(error)")
         }
         
-        // Initialize DIContainer
         let container = DIContainer.shared
         container.settingsService.initialize(with: initializedContainer.mainContext)
         _diContainer = StateObject(wrappedValue: container)
         
-        // Initialize ChatViewModel
         let chat = ChatViewModel(container: initializedContainer)
         _chatViewModel = StateObject(wrappedValue: chat)
         
-        // Initialize WindowManager
-        let manager = WindowStateManager(chatViewModel: chat)
-        _windowManager = StateObject(wrappedValue: manager)
-        
-        // Setup WindowManager
-        WindowManager.shared.setup(chatViewModel: chat, windowStateManager: manager)
-        
-        // Setup accessibility
-        container.accessibilityService.setupPermissions { trusted in
-            if trusted {
-                DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-                    WindowManager.shared.reloadHotKey()
-                }
-            }
-        }
+        WindowManager.shared.setup(chatViewModel: chat)
     }
-    
-    // MARK: - Private Methods
-    
-    // MARK: - Private Methods
-    
-    // MARK: - Private Methods
     
     var body: some Scene {
         MenuBarExtra("Ollama", systemImage: "brain") {
-            Group {
-                PopupContentView(windowManager: windowManager, chatViewModel: chatViewModel)
-                    .modelContainer(initializedContainer)
-                    .onAppear {
-                        if let mostRecentChat = chatViewModel.chatHistory.first {
-                            chatViewModel.loadSession(mostRecentChat)
-                        }
-                    }
+            Button("Open App") {
+                WindowManager.shared.showMainWindow()
             }
-            .modifier(ModelContainerModifier(container: initializedContainer))
+            
+            Button("Open Pinned Window") {
+                WindowManager.shared.showPinnedWindow()
+            }
+            .keyboardShortcut(.space, modifiers: [.control])
+            
+            Button("Open Quick Input") {
+                WindowManager.shared.showQuickInputWindow()
+            }
+            .keyboardShortcut(.space, modifiers: [.control, .shift])
+            
+            Divider()
+            
+            Button("Quit") {
+                NSApplication.shared.terminate(nil)
+            }
+            .keyboardShortcut("q", modifiers: [.command])
         }
-        .menuBarExtraStyle(.window)
-    }
-}
-
-struct ModelContainerModifier: ViewModifier {
-    let container: ModelContainer?
-    
-    func body(content: Content) -> some View {
-        if let container = container {
-            content.modelContainer(container)
-        } else {
-            content
-        }
+        .menuBarExtraStyle(.menu)
     }
 }

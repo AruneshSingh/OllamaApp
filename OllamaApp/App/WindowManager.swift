@@ -21,18 +21,18 @@ class QuickInputPanel: NSPanel {
 class WindowManager: ObservableObject {
     static let shared = WindowManager()
     
+    @Published private(set) var isHotkeyEnabled = false
+    @Published var isPinned: Bool = false
+    @Published var showHistory: Bool = false
+    @Published var quickInputText: String = ""
+    
     private var hotKey: HotKey?
     private var quickInputHotKey: HotKey?
     private var pinnedWindow: NSWindow?
-    private var popupWindow: NSWindow?
     private var quickInputWindow: NSWindow?
     private weak var chatViewModel: ChatViewModel?
-    private weak var windowStateManager: WindowStateManager?
-    
-    @Published private(set) var isHotkeyEnabled = false
     
     init() {
-        // Initialize the global hotkey
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
             Task { @MainActor in
                 self?.setupHotKey()
@@ -41,10 +41,9 @@ class WindowManager: ObservableObject {
         }
     }
     
-    // Setup dependencies
-    func setup(chatViewModel: ChatViewModel, windowStateManager: WindowStateManager) {
+    // Updated setup method to remove windowStateManager
+    func setup(chatViewModel: ChatViewModel) {
         self.chatViewModel = chatViewModel
-        self.windowStateManager = windowStateManager
     }
     
     private func setupHotKey() {
@@ -93,68 +92,38 @@ class WindowManager: ObservableObject {
         }
     }
     
-    private func createPinnedWindowIfNeeded() {
-        guard let chatViewModel = chatViewModel,
-              let windowStateManager = windowStateManager else {
-            print("Dependencies not set up")
-            return
+    
+    func showPinnedWindow() {
+        guard let chatViewModel = chatViewModel else { return }
+        
+        // Load most recent chat if no chat is currently loaded
+        if chatViewModel.messages.isEmpty, let mostRecentChat = chatViewModel.chatHistory.first {
+            chatViewModel.loadSession(mostRecentChat)
         }
         
-        // Update isPinned state on main thread
-        windowStateManager.isPinned = true
-        
         if pinnedWindow == nil {
-            windowStateManager.isPinned = true
-            
-            let contentView = PinnedContentView(windowManager: windowStateManager, chatViewModel: chatViewModel)
+            let contentView = PinnedContentView(chatViewModel: chatViewModel)
                 .modelContainer(chatViewModel.container)
             
             let hostingView = NSHostingView(rootView: contentView)
             pinnedWindow = WindowConfiguration.createWindow(
-                title: "Better AI interface",
+                title: "Ollama",
                 contentView: hostingView,
                 isPinned: true
             )
             
             if let window = pinnedWindow {
                 window.level = .floating
-                window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
-                window.setFrameAutosaveName("OllamaWindow")
-                window.backgroundColor = NSColor.black.withAlphaComponent(0.6)
+                window.collectionBehavior = [.canJoinAllSpaces]
+                window.setFrameAutosaveName("OllamaPinnedWindow")
                 window.styleMask.insert(.resizable)
             }
-        } else {
-            windowStateManager.isPinned = true
+            
+            isPinned = true
         }
-    }
-    
-    func showPinnedWindow() {
-        createPinnedWindowIfNeeded()
         
-        if let window = pinnedWindow {
-            WindowConfiguration.showWindow(window)
-        }
-    }
-    
-    func showPopupWindow() {
-        guard let chatViewModel = chatViewModel,
-              let windowStateManager = windowStateManager else { return }
-        
-        let contentView = PopupContentView(windowManager: windowStateManager, chatViewModel: chatViewModel)
-            .modelContainer(chatViewModel.container)
-        
-        let hostingView = NSHostingView(rootView: contentView)
-        popupWindow = WindowConfiguration.createWindow(
-            title: "Ollama",
-            contentView: hostingView,
-            isPinned: false
-        )
-        
-        if let window = popupWindow {
-            window.level = .floating
-            window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
-            WindowConfiguration.showWindow(window)
-        }
+        pinnedWindow?.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
     }
     
     func showQuickInputWindow() {
@@ -164,10 +133,9 @@ class WindowManager: ObservableObject {
         
         let rectSize = NSRect(x: 0, y: 0, width: rectWidth, height: rectHeight)
         
-        guard let chatViewModel = chatViewModel,
-              let windowStateManager = windowStateManager else { return }
+        guard let chatViewModel = chatViewModel else { return }
         
-        let contentView = QuickInputView(windowManager: windowStateManager, chatViewModel: chatViewModel)
+        let contentView = QuickInputView(chatViewModel: chatViewModel)
             .modelContainer(chatViewModel.container)
         
         let hostingView = NSHostingView(rootView: contentView)
@@ -210,19 +178,31 @@ class WindowManager: ObservableObject {
     func closePinnedWindow() {
         pinnedWindow?.close()
         pinnedWindow = nil
-        windowStateManager?.isPinned = false
-    }
-    
-    func closePopupWindow() {
-        popupWindow?.close()
-        popupWindow = nil
+        isPinned = false
     }
     
     func closeQuickInputWindow(clearText: Bool = false) {
         if clearText {
-            windowStateManager?.quickInputText = ""
+            quickInputText = ""
         }
         quickInputWindow?.close()
         quickInputWindow = nil
+    }
+    
+    func showMainWindow() {
+        guard let chatViewModel = chatViewModel else { return }
+        
+        let contentView = PinnedContentView(chatViewModel: chatViewModel)
+            .modelContainer(chatViewModel.container)
+        
+        let hostingView = NSHostingView(rootView: contentView)
+        let window = WindowConfiguration.createWindow(
+            title: "Ollama",
+            contentView: hostingView,
+            isPinned: false
+        )
+        
+        window.setFrameAutosaveName("OllamaMainWindow")
+        WindowConfiguration.showWindow(window)
     }
 }
