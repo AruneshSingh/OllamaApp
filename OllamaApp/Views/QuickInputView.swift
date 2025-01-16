@@ -124,31 +124,35 @@ struct GlowingBorder: ViewModifier {
     let colors = [Color.blue, Color.purple, Color.pink, Color.orange, Color.blue]
     
     func body(content: Content) -> some View {
-        content
-            .background(
-                ZStack {
-                    VisualEffectView(material: .hudWindow, blendingMode: .behindWindow)
-                    Color.black.opacity(0.4)
-                }
-            )
-            .clipShape(RoundedRectangle(cornerRadius: 10))
-            .overlay(
-                RoundedRectangle(cornerRadius: 10)
-                    .strokeBorder(
-                        AngularGradient(
-                            colors: colors,
-                            center: .center,
-                            angle: .degrees(phase)
-                        ),
-                        lineWidth: 2
-                    )
-            )
-            .shadow(color: Color.blue.opacity(0.5), radius: 10, x: 0, y: 0)
-            .onAppear {
-                withAnimation(.linear(duration: 3).repeatForever(autoreverses: false)) {
-                    phase = 360
-                }
+        ZStack {
+            content
+                .background(
+                    ZStack {
+                        VisualEffectView(material: .hudWindow, blendingMode: .behindWindow)
+                        Color.black.opacity(0.4)
+                    }
+                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                )
+                .clipShape(RoundedRectangle(cornerRadius: 10))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 10)
+                        .strokeBorder(
+                            AngularGradient(
+                                colors: colors,
+                                center: .center,
+                                angle: .degrees(phase)
+                            ),
+                            lineWidth: 2
+                        )
+                )
+                .shadow(color: Color.blue.opacity(0.5), radius: 10, x: 0, y: 0)
+        }
+        .clipShape(RoundedRectangle(cornerRadius: 10))
+        .onAppear {
+            withAnimation(.linear(duration: 3).repeatForever(autoreverses: false)) {
+                phase = 360
             }
+        }
     }
 }
 
