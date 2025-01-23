@@ -177,10 +177,40 @@ struct HistoryView: View {
 
 private struct SessionMetadata: View {
     let session: ChatSession
+
+    private func formatRelativeTime(from date: Date) -> String {
+        let now = Date()
+        let components = Calendar.current.dateComponents([.second, .minute, .hour, .day, .month], from: date, to: now)
+        
+        if let months = components.month, months > 0 {
+            return "\(months) month\(months == 1 ? "" : "s") ago"
+        }
+        
+        if let days = components.day {
+            let weeks = days / 7
+            if weeks > 0 {
+                return "\(weeks) week\(weeks == 1 ? "" : "s") ago"
+            }
+            
+            if days > 0 {
+                return "\(days) day\(days == 1 ? "" : "s") ago"
+            }
+        }
+        
+        if let hours = components.hour, hours > 0 {
+            return "\(hours) hour\(hours == 1 ? "" : "s") ago"
+        }
+        
+        if let minutes = components.minute, minutes > 0 {
+            return "\(minutes) minute\(minutes == 1 ? "" : "s") ago"
+        }
+        
+        return "a few seconds ago"
+    }
     
     var body: some View {
         HStack {
-            Text(session.lastUpdated, style: .relative)
+            Text(formatRelativeTime(from: session.lastUpdated))
             if !session.messages.isEmpty {
                 Text("•")
                 Text("\(session.messages.count) messages")
@@ -194,6 +224,6 @@ private struct SessionMetadata: View {
     
     private func makeAccessibilityLabel() -> Text {
         let messageCount = session.messages.isEmpty ? "" : ", \(session.messages.count) messages"
-        return Text(session.lastUpdated, style: .relative) + Text(messageCount)
+        return Text(formatRelativeTime(from: session.lastUpdated)) + Text(messageCount)
     }
 }
