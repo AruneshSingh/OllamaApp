@@ -8,12 +8,10 @@
 
 /* Begin PBXBuildFile section */
 		65F9C0382D24057500802498 /* HotKey in Frameworks */ = {isa = PBXBuildFile; productRef = 65F9C0372D24057500802498 /* HotKey */; };
-		65F9C03A2D240EB900802498 /* Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 65F9C0392D240EB900802498 /* Info.plist */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		65E51DEC2D2306060005B4BB /* OllamaApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = OllamaApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		65F9C0392D240EB900802498 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -39,7 +37,6 @@
 		65E51DE32D2306060005B4BB = {
 			isa = PBXGroup;
 			children = (
-				65F9C0392D240EB900802498 /* Info.plist */,
 				65E51DEE2D2306060005B4BB /* OllamaApp */,
 				65E51DED2D2306060005B4BB /* Products */,
 			);
@@ -121,7 +118,6 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				65F9C03A2D240EB900802498 /* Info.plist in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
