@@ -65,13 +65,11 @@ struct PinnedContentView: View {
                     }
                 }
                 .onChange(of: chatViewModel.messages) { _, _ in
-                    withAnimation {
                         proxy.scrollTo(bottomID, anchor: .bottom)
-                    }
                 }
                 .onChange(of: chatViewModel.messages.last?.content) { _, _ in
                     if chatViewModel.isStreaming {
-                        withAnimation {
+                        withAnimation(.linear(duration: 0.1)) {
                             proxy.scrollTo(bottomID, anchor: .bottom)
                         }
                     }

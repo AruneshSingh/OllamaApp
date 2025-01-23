@@ -25,7 +25,8 @@ struct MessageView: View {
                 Text(message.content)
                     .textSelection(.enabled)
                     .fixedSize(horizontal: false, vertical: true)
-                    .animation(.easeInOut, value: message.content)
+                    .animation(.linear(duration: 0.25), value: message.content)
+                    .drawingGroup()
             }
         }
         .padding(8)
